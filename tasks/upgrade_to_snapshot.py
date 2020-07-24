@@ -2,18 +2,18 @@ from pyinfra import host
 from pyinfra.operations import server
 
 server.shell(
-    {'Upgrade to latest snapshot'},
-    'sysupgrade -s -n',
+    name='Upgrade to latest snapshot',
+    commands=['sysupgrade -s -n'],
 )
 
 server.reboot(
-    {'Reboot the server and wait to reconnect'},
+    name='Reboot the server and wait to reconnect',
     delay=5,
     timeout=30,
-    reboot_timeout=10*60
+    reboot_timeout=10*60,
 )
 
 server.shell(
-    {'Upgrade all packages'},
-    'pkg_add -u'
+    name='Upgrade all packages',
+    commands=['pkg_add -u'],
 )
