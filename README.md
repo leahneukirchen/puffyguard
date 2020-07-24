@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 * Python 3
 
-* pyinfra 0.15 or a pipenv:
+* pyinfra 1.0.x or a pipenv:
   ```
   pipenv lock
   pipenv sync
@@ -63,8 +63,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     and run `wg-quick up $client`.
   * Scan `out/$client.png` with the WireGuard app on smartphone.
 
-  The default configuration tunnels all IPv4 traffic through WireGuard,
-  adjust `AllowedIPs` to your taste.
+  The default configuration tunnels (and NATs) all IPv4 (and IPv6, if
+  the server has it) traffic through WireGuard, adjust `AllowedIPs` to
+  your taste.
 
 * To generate new accounts, just append them to `clients.py`
   and redeploy `wireguard.py`.
@@ -77,7 +78,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ## Author
 
 Created by Leah Neukirchen <leah@vuxu.org>
-as a Mayflower Mayday project on 2020-06-26.
+as a Mayflower Mayday project on 2020-06-26 and 2020-07-24..
 
 To the extent possible under law, the creator of this work has waived
 all copyright and related or neighboring rights to this work.
