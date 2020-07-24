@@ -128,6 +128,7 @@ up
 !/usr/local/bin/wg set {WG_IF} private-key /etc/wireguard/server.key
 '''),
     dest=f'/etc/hostname.{WG_IF}',
+    mode='640'
 )
 
 server.shell(
@@ -151,6 +152,7 @@ files.template(
     name='Generate PF config',
     src='templates/pf.conf.j2',
     dest='/etc/pf.conf',
+    mode='600',
     DEFAULT_IF=DEFAULT_IF,
     WG_IF=WG_IF,
 )
