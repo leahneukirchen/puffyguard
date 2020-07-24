@@ -21,15 +21,12 @@ if not (host.fact.os_version >= '6.8' or \
         (host.fact.os_version == '6.7' and is_snapshot())):
     raise OperationError('OpenBSD release too old')
 
-PKG_PATH = f"https://ftp.openbsd.org/pub/OpenBSD/snapshots/packages/{host.fact.arch}/" if is_snapshot() else None
-
 DEFAULT_IF = host.fact.command(
     '''route -n show -inet | awk '/^default/ { print $NF; exit }' ''')
 
 pkg.packages(
     {'Install wireguard tools'},
     ['wireguard-tools'],
-    pkg_path=PKG_PATH,
 )
 
 files.directory(
