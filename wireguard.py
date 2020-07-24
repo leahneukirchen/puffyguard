@@ -4,6 +4,7 @@ import os
 from pyinfra import host
 from pyinfra.operations import files, pkg, python, server
 from pyinfra.api.exceptions import OperationError
+import ipfact
 
 import clients
 
@@ -23,6 +24,12 @@ if not (host.fact.os_version >= '6.8' or \
 
 DEFAULT_IF = host.fact.command(
     '''route -n show -inet | awk '/^default/ { print $NF; exit }' ''')
+
+ipv6nets = host.fact.ipv6_networks(DEFAULT_IF)
+if ipv6nets:
+    IPV6NETWORK = ipv6nets[0]
+else:
+    IPV6NETWORK = None
 
 pkg.packages(
     name='Install wireguard tools',
@@ -68,15 +75,18 @@ def generate_client_config(state, host):
             client_psk = f.read().strip()
         with open(f"out/{client}.conf", "w") as f:
             os.chmod(f.fileno(), 0o600)
+            addresses = [ f"{NETWORK[i]}/{NETWORK.prefixlen}" ]
+            if IPV6NETWORK:
+                addresses.append(f"{IPV6NETWORK[102*16*16*16*16 + i]}/{IPV6NETWORK.prefixlen}")
             f.write(f'''\
 [Interface]
 PrivateKey = {client_key}
-Address = {NETWORK[i]}/{NETWORK.prefixlen}
+Address = {', '.join(addresses)}
 
 [Peer]
 PublicKey = {server_pub}
 PresharedKey = {client_psk}
-AllowedIPs = 0.0.0.0/0
+AllowedIPs = 0.0.0.0/0{ ", ::/0" if IPV6NETWORK else "" }
 EndPoint = {host}:{PORT}
 ''')
         os.system(f'''umask 0077; command -v qrencode && qrencode -t png -o out/{client}.png < out/{client}.conf''')
@@ -95,11 +105,14 @@ ListenPort = {PORT}
             client_pub = f.read().strip()
         with open(f"out/{client}.psk") as f:
             client_psk = f.read().strip()
+        addresses = [ f"{NETWORK[i]}/{NETWORK.max_prefixlen}" ]
+        if IPV6NETWORK:
+            addresses.append(f"{IPV6NETWORK[102*16*16*16*16 + i]}/{IPV6NETWORK.max_prefixlen}")
         WG_CONF.write(f'''\
 [Peer]
 PublicKey = {client_pub}
 PresharedKey = {client_psk}
-AllowedIPs = {NETWORK[i]}/{NETWORK[i].max_prefixlen}
+AllowedIPs = {', '.join(addresses)}
 ''')
 
 python.call(
@@ -122,6 +135,7 @@ files.put(
     name='Create wireguard interface configuration',
     src=io.StringIO(f'''\
 inet {SERVER} {NETWORK.netmask} NONE description "wireguard"
+{f"inet6 alias {IPV6NETWORK[102*16*16*16*16]}/112" if IPV6NETWORK else ""}
 up
 
 !/usr/local/bin/wg setconf {WG_IF} /etc/wireguard/wg0.conf
@@ -148,6 +162,19 @@ files.line(
     replace='net.inet.ip.forwarding=1',
 )
 
+if IPV6NETWORK:
+    server.shell(
+        name='Enable IPv6 packet forwarding',
+        commands=['sysctl net.inet6.ip6.forwarding=1'],
+    )
+
+    files.line(
+        name='Persist IPv4 packet forwarding',
+        path='/etc/sysctl.conf',
+        line=r'^net.inet6.ip6.forwarding=',
+        replace='net.inet6.ip6.forwarding=1',
+    )
+
 files.template(
     name='Generate PF config',
     src='templates/pf.conf.j2',
@@ -155,6 +182,7 @@ files.template(
     mode='600',
     DEFAULT_IF=DEFAULT_IF,
     WG_IF=WG_IF,
+    IPV6NETWORK=IPV6NETWORK,
 )
 
 server.shell(
