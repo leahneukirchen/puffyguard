@@ -25,31 +25,31 @@ DEFAULT_IF = host.fact.command(
     '''route -n show -inet | awk '/^default/ { print $NF; exit }' ''')
 
 pkg.packages(
-    {'Install wireguard tools'},
-    ['wireguard-tools'],
+    name='Install wireguard tools',
+    packages=['wireguard-tools'],
 )
 
 files.directory(
-    {'Create wireguard configuration directory'},
-    '/etc/wireguard',
+    name='Create wireguard configuration directory',
+    path='/etc/wireguard',
     user='root', group='wheel', mode='600'
 )
 
 server.shell(
-    {'Generate server keys'},
-    '''
+    name='Generate server keys',
+    commands=['''
     if ! test -f /etc/wireguard/server.key; then (
       umask 0077
       wg genkey > /etc/wireguard/server.key
       wg pubkey < /etc/wireguard/server.key > /etc/wireguard/server.pub
     ); fi
-    '''
+    ''']
 )
 
 files.get(
-    {'Retrieve server public key'},
-    '/etc/wireguard/server.pub',
-    'out/server.pub'
+    name='Retrieve server public key',
+    src='/etc/wireguard/server.pub',
+    dest='out/server.pub'
 )
 
 def generate_client_config(state, host):
@@ -103,59 +103,59 @@ AllowedIPs = {NETWORK[i]}/{NETWORK[i].max_prefixlen}
 ''')
 
 python.call(
-    {'Generate client wireguard config'},
-    generate_client_config,
+    name='Generate client wireguard config',
+    function=generate_client_config,
 )
 
 python.call(
-    {'Generate wireguard config'},
-    generate_config,
+    name='Generate wireguard config',
+    function=generate_config,
 )
 
 files.put(
-    {'Upload wireguard config'},
-    WG_CONF,
-    f'/etc/wireguard/{WG_IF}.conf',
+    name='Upload wireguard config',
+    src=WG_CONF,
+    dest=f'/etc/wireguard/{WG_IF}.conf',
 )
 
 files.put(
-    {'Create wireguard interface configuration'},
-    io.StringIO(f'''\
+    name='Create wireguard interface configuration',
+    src=io.StringIO(f'''\
 inet {SERVER} {NETWORK.netmask} NONE description "wireguard"
 up
 
 !/usr/local/bin/wg setconf {WG_IF} /etc/wireguard/wg0.conf
 !/usr/local/bin/wg set {WG_IF} private-key /etc/wireguard/server.key
 '''),
-    f'/etc/hostname.{WG_IF}'
+    dest=f'/etc/hostname.{WG_IF}',
 )
 
 server.shell(
-    {'Configure wireguard interface'},
-    f'sh /etc/netstart ${WG_IF}'
+    name='Configure wireguard interface',
+    commands=[f'sh /etc/netstart ${WG_IF}'],
 )
 
 server.shell(
-    {'Enable IPv4 packet forwarding'},
-    'sysctl net.inet.ip.forwarding=1'
+    name='Enable IPv4 packet forwarding',
+    commands=['sysctl net.inet.ip.forwarding=1'],
 )
 
 files.line(
-    {'Persist IPv4 packet forwarding'},
-    '/etc/sysctl.conf',
-    r'^net.inet.ip.forwarding=',
-    replace='net.inet.ip.forwarding=1'
+    name='Persist IPv4 packet forwarding',
+    path='/etc/sysctl.conf',
+    line=r'^net.inet.ip.forwarding=',
+    replace='net.inet.ip.forwarding=1',
 )
 
 files.template(
-    {'Generate PF config'},
-    'templates/pf.conf.j2',
-    '/etc/pf.conf',
+    name='Generate PF config',
+    src='templates/pf.conf.j2',
+    dest='/etc/pf.conf',
     DEFAULT_IF=DEFAULT_IF,
     WG_IF=WG_IF,
 )
 
 server.shell(
-    {'Enable PF'},
-    'pfctl -f /etc/pf.conf; pfctl -e || true'
+    name='Enable PF',
+    commands=['pfctl -f /etc/pf.conf; pfctl -e || true'],
 )
