@@ -35,6 +35,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 * Clean install of OpenBSD 6.7.
   * I use a pre-installed 1024MB instance at Vultr ($5 / month).
+  * Alternatively you can use an instance at Hetzner Cloud (2.50€ / month):
+    * Install any OS, select OpenBSD 6.7 from ISO Images, and reboot
+      and install manually.
+    * If you want IPv6, you need to enable it manually as there is
+      no SLAAC available (as of 2020-08-03):
+      * `echo fe80::1%vio0 >/etc/mygate`
+      * `echo inet6 $YOURPREFIX::1 64 >/etc/hostname.vio0`
+
 * Login as `root` is possible without entering a password (using SSH keys).
 
 ## Setting up PuffyGuard
